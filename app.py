@@ -1,10 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_socketio import SocketIO, join_room, emit
+import eventlet
 import uuid
+
+eventlet.monkey_patch()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='eventlet')
 
 # Homepage: create or join a room
 @app.route('/')
@@ -36,5 +39,6 @@ def handle_join(data):
 def handle_send_message(data):
     emit('message', {'user': data['name'], 'text': data['message']}, room=data['room'])
 
+# Main start point for Render
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, host='0.0.0.0', port=10000)
