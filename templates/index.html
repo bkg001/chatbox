@@ -1,13 +1,84 @@
+<!-- VERSION 3: WhatsApp-style Join Page -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Join Private Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #e5ddd5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .join-container {
+      background-color: #ffffff;
+      padding: 30px 25px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      width: 90%;
+      max-width: 400px;
+      box-sizing: border-box;
+    }
+
+    h2 {
+      text-align: center;
+      color: #075e54;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"], input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background-color: #25d366;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #128c7e;
+    }
+
+    @media (max-width: 480px) {
+      .join-container {
+        padding: 20px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      input, button {
+        font-size: 14px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h2>Enter Your Name to Join Chat</h2>
-  <form action="/join" method="POST">
-    <input type="text" name="name" placeholder="Your name" required><br><br>
-    <input type="text" name="room" placeholder="Room ID (e.g. abc123)" required><br><br>
+  <form class="join-container" action="/join" method="POST" enctype="multipart/form-data">
+    <h2>🚀 Join Chat Room</h2>
+    <input type="text" name="name" placeholder="Enter your name" required>
+    <input type="text" name="room" placeholder="Enter Room ID" required>
+    <input type="file" name="profile_pic" accept="image/*">
     <button type="submit">Join Chat</button>
   </form>
 </body>
