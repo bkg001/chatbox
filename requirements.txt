@@ -1,3 +1,4 @@
 flask
-flask_socketio
+flask-socketio
 eventlet
+werkzeug

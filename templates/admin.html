@@ -1,27 +1,124 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Admin Panel</title>
+  <meta charset="UTF-8">
+  <title>Admin Panel - Clear Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
   <style>
-    body { font-family: sans-serif; background: #f4f4f4; text-align: center; padding-top: 50px; }
-    button {
-      padding: 12px 20px;
-      background-color: #d9534f;
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #e5ddd5;
+      margin: 0;
+    }
+
+    header {
+      background-color: #075e54;
       color: white;
-      border: none;
-      font-size: 16px;
+      padding: 15px;
+      text-align: center;
+    }
+
+    #chat-box {
+      padding: 10px;
+      height: 70vh;
+      overflow-y: auto;
+      background: #ece5dd;
+    }
+
+    .msg {
+      background-color: white;
+      margin: 10px;
+      padding: 10px;
       border-radius: 8px;
+      position: relative;
+      max-width: 60%;
+    }
+
+    .admin-delete {
+      position: absolute;
+      bottom: -5px;
+      right: -5px;
+      background-color: red;
+      color: white;
+      border-radius: 50%;
+      font-size: 12px;
+      padding: 4px;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #c9302c;
+
+    #controls {
+      padding: 15px;
+      text-align: center;
+      background-color: #fff;
+    }
+
+    #clear-btn {
+      background-color: #d9534f;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    img {
+      max-width: 100%;
     }
   </style>
 </head>
 <body>
-  <h2>Admin Panel</h2>
-  <form method="POST" action="/clear_chats">
-    <button type="submit">🧹 Clear All Chat History</button>
-  </form>
+  <header>Admin Chat Control Panel</header>
+  <div id="chat-box"></div>
+
+  <div id="controls">
+    <button id="clear-btn" onclick="clearChat()">🗑️ Clear All Chat</button>
+  </div>
+
+  <script>
+    const socket = io();
+    const room = "admin";
+
+    socket.emit('join', { room: room, name: 'Admin' });
+
+    socket.on('message', data => {
+      const msg = document.createElement('div');
+      msg.classList.add('msg');
+      msg.innerHTML = `<strong>${data.user}:</strong><br>`;
+
+      if (data.type === 'image' || data.type === 'sticker') {
+        const img = document.createElement('img');
+        img.src = data.image_url;
+        msg.appendChild(img);
+      } else {
+        msg.innerHTML += data.text;
+      }
+
+      const del = document.createElement('span');
+      del.className = 'admin-delete';
+      del.innerText = 'X';
+      del.onclick = () => deleteMessage(data.timestamp);
+      msg.appendChild(del);
+
+      document.getElementById('chat-box').appendChild(msg);
+    });
+
+    function deleteMessage(timestamp) {
+      fetch('/delete_message_admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timestamp: timestamp })
+      });
+    }
+
+    function clearChat() {
+      fetch('/clear_all_chats', {
+        method: 'POST'
+      }).then(() => {
+        document.getElementById('chat-box').innerHTML = '';
+      });
+    }
+  </script>
 </body>
 </html>

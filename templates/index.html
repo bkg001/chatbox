@@ -1,48 +1,76 @@
+<!-- VERSION 2: WhatsApp UI -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Join Chat</title>
+  <title>Join Private Chat</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      background: #e5ddd5;
-      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #ece5dd;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
     }
-    form {
-      background: #fff;
+
+    .form-container {
+      background-color: #ffffff;
       padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px #ccc;
+      text-align: center;
       width: 90%;
       max-width: 400px;
     }
-    h2 { color: #075e54; text-align: center; }
-    input, button {
+
+    h2 {
+      color: #075e54;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
       width: 100%;
       padding: 12px;
       margin: 10px 0;
-      font-size: 16px;
-      border-radius: 8px;
       border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
     }
+
     button {
-      background: #25d366;
+      background-color: #25d366;
       color: white;
+      padding: 12px 25px;
       border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #128c7e;
+    }
+
+    @media screen and (max-width: 480px) {
+      .form-container {
+        padding: 20px;
+      }
     }
   </style>
 </head>
 <body>
-  <form action="/join" method="POST">
-    <h2>Join Chat</h2>
-    <input type="text" name="name" placeholder="Your name" required>
-    <input type="text" name="room" placeholder="Room ID" required>
-    <button type="submit">Join Chat</button>
-  </form>
+  <div class="form-container">
+    <h2>Join Chat Room</h2>
+    <form action="/join" method="POST">
+      <input type="text" name="name" placeholder="Your name" required>
+      <input type="text" name="room" placeholder="Room ID (e.g. abc123)" required>
+      <button type="submit">Join Chat</button>
+    </form>
+  </div>
 </body>
 </html>
