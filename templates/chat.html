@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<!-- VERSION 2: WhatsApp UI -->
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Style Chat</title>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: #ece5dd;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #075e54;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    #chat-box {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 10px 15px;
+      border-radius: 10px;
+      font-size: 15px;
+      line-height: 1.4;
+      position: relative;
+      word-wrap: break-word;
+    }
+
+    .sent {
+      align-self: flex-end;
+      background-color: #dcf8c6;
+      border-bottom-right-radius: 0;
+    }
+
+    .received {
+      align-self: flex-start;
+      background-color: white;
+      border-bottom-left-radius: 0;
+    }
+
+    .meta {
+      font-size: 11px;
+      text-align: right;
+      margin-top: 4px;
+      opacity: 0.6;
+    }
+
+    .input-area {
+      display: flex;
+      padding: 10px;
+      background: #f0f0f0;
+      border-top: 1px solid #ddd;
+    }
+
+    #message {
+      flex: 1;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+
+    button {
+      margin-left: 10px;
+      padding: 10px 15px;
+      font-size: 15px;
+      background-color: #25d366;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #20c05c;
+    }
+  </style>
+</head>
+<body>
+  <header>Chat Room: {{ room_id }}</header>
+  <div id="chat-box"></div>
+
+  <div class="input-area">
+    <input id="message" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage();">
+    <button onclick="sendMessage()">➤</button>
+  </div>
+
+  <script>
+    const socket = io();
+    const room = "{{ room_id }}";
+    const name = "{{ name }}";
+
+    socket.emit('join', { room: room, name: name });
+
+    socket.on('message', data => {
+      const chatBox = document.getElementById('chat-box');
+
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('message');
+      wrapper.classList.add(data.user === name ? 'sent' : 'received');
+
+      const msgText = document.createElement('div');
+      msgText.textContent = `${data.text}`;
+      wrapper.appendChild(msgText);
+
+      const meta = document.createElement('div');
+      meta.classList.add('meta');
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      meta.textContent = data.user === name ? `You • ${time}` : `${data.user} • ${time}`;
+      wrapper.appendChild(meta);
+
+      chatBox.appendChild(wrapper);
+      scrollToBottom();
+    });
+
+    function sendMessage() {
+      const msgInput = document.getElementById('message');
+      const msg = msgInput.value.trim();
+      if (msg !== '') {
+        socket.emit('send_message', { room: room, name: name, message: msg });
+        msgInput.value = '';
+      }
+    }
+
+    function scrollToBottom() {
+      const chatBox = document.getElementById('chat-box');
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
