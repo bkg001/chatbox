@@ -1,103 +1,109 @@
-<!-- VERSION 4: Full WhatsApp Theme -->
+<!-- VERSION 6: Full WhatsApp-style Chat Page -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Private Chat Room</title>
+  <title>Chat Room - {{ room_id }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
-      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #e5ddd5;
       display: flex;
       flex-direction: column;
       height: 100vh;
-      background: #e5ddd5;
     }
 
     header {
-      background: #075e54;
+      background-color: #075e54;
       color: white;
-      padding: 10px;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-    }
-
-    header img {
-      height: 36px;
-      width: 36px;
-      border-radius: 50%;
-      margin-right: 10px;
-      object-fit: cover;
+      padding: 15px;
+      font-size: 18px;
+      font-weight: bold;
     }
 
     #chat-box {
       flex: 1;
       overflow-y: auto;
-      padding: 10px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
     }
 
     .message {
-      margin: 10px;
-      padding: 10px;
-      border-radius: 10px;
-      max-width: 80%;
-      clear: both;
+      max-width: 70%;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      position: relative;
       word-wrap: break-word;
+      font-size: 15px;
+      line-height: 1.4;
     }
 
     .message.user {
-      background: #dcf8c6;
-      float: right;
+      align-self: flex-end;
+      background-color: #dcf8c6;
+      border-bottom-right-radius: 0;
     }
 
     .message.other {
-      background: #ffffff;
-      float: left;
+      align-self: flex-start;
+      background-color: #fff;
+      border-bottom-left-radius: 0;
     }
 
     .message.system {
-      background: #f0f0f0;
+      align-self: center;
+      background-color: #d3d3d3;
+      color: #444;
+      border-radius: 20px;
+      padding: 5px 10px;
+      font-size: 13px;
+    }
+
+    .time {
+      font-size: 11px;
       color: #555;
-      text-align: center;
-      margin: 10px auto;
+      position: absolute;
+      bottom: 4px;
+      right: 8px;
     }
 
     .input-area {
       display: flex;
-      flex-direction: row;
-      padding: 10px;
       background: #f0f0f0;
-      gap: 10px;
+      padding: 10px;
     }
 
     #message {
       flex: 1;
       padding: 10px;
-      font-size: 16px;
+      border-radius: 20px;
       border: 1px solid #ccc;
-      border-radius: 5px;
+      font-size: 14px;
     }
 
     button {
-      padding: 10px 15px;
-      font-size: 16px;
-      background: #25d366;
+      background-color: #25d366;
       color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 50%;
+      padding: 10px 14px;
+      font-size: 16px;
+      margin-left: 10px;
+      cursor: pointer;
     }
 
     @media (max-width: 600px) {
-      #message {
-        font-size: 14px;
+      .message {
+        max-width: 90%;
       }
 
-      button {
-        font-size: 14px;
+      header {
+        font-size: 16px;
         padding: 10px;
       }
     }
@@ -105,58 +111,61 @@
 </head>
 <body>
 
-  <header>
-    {% if pic %}
-      <img src="/static/{{ pic }}" alt="Profile">
-    {% endif %}
-    Welcome <strong>{{ name }}</strong> | Room: <strong>{{ room_id }}</strong>
-  </header>
+<header>
+  Chat Room: {{ room_id }} — You: {{ name }}
+</header>
 
-  <div id="chat-box"></div>
+<div id="chat-box"></div>
 
-  <div class="input-area">
-    <input id="message" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage();">
-    <button onclick="sendMessage()">Send</button>
-  </div>
+<div class="input-area">
+  <input id="message" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage();">
+  <button onclick="sendMessage()">➤</button>
+</div>
 
-  <script>
-    const socket = io();
-    const room = "{{ room_id }}";
-    const name = "{{ name }}";
+<script>
+  const socket = io();
+  const room = "{{ room_id }}";
+  const name = "{{ name }}";
 
-    socket.emit('join', { room: room, name: name });
+  socket.emit('join', { room: room, name: name });
 
-    socket.on('message', data => {
-      const msg = document.createElement('div');
-      msg.classList.add('message');
+  socket.on('message', data => {
+    const messageDiv = document.createElement('div');
+    const isSystem = data.user === 'System';
+    const isOwn = data.user === name;
 
-      if (data.user === 'System') {
-        msg.classList.add('system');
-      } else if (data.user === name) {
-        msg.classList.add('user');
-      } else {
-        msg.classList.add('other');
-      }
-
-      msg.textContent = `${data.user}: ${data.text}`;
-      document.getElementById('chat-box').appendChild(msg);
-      scrollToBottom();
-    });
-
-    function sendMessage() {
-      const msgInput = document.getElementById('message');
-      const msg = msgInput.value.trim();
-      if (msg !== '') {
-        socket.emit('send_message', { room: room, name: name, message: msg });
-        msgInput.value = '';
-      }
+    if (isSystem) {
+      messageDiv.className = 'message system';
+      messageDiv.textContent = data.text;
+    } else {
+      messageDiv.className = 'message ' + (isOwn ? 'user' : 'other');
+      messageDiv.innerHTML = `<strong>${data.user}:</strong> ${data.text}<span class="time">${getTime()}</span>`;
     }
 
-    function scrollToBottom() {
-      const chatBox = document.getElementById('chat-box');
-      chatBox.scrollTop = chatBox.scrollHeight;
+    document.getElementById('chat-box').appendChild(messageDiv);
+    scrollToBottom();
+  });
+
+  function sendMessage() {
+    const msgInput = document.getElementById('message');
+    const msg = msgInput.value.trim();
+    if (msg !== '') {
+      socket.emit('send_message', { room: room, name: name, message: msg });
+      msgInput.value = '';
     }
-  </script>
+  }
+
+  function scrollToBottom() {
+    const chatBox = document.getElementById('chat-box');
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function getTime() {
+    const now = new Date();
+    return now.getHours().toString().padStart(2, '0') + ":" +
+           now.getMinutes().toString().padStart(2, '0');
+  }
+</script>
 
 </body>
 </html>
