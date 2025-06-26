@@ -1,27 +1,26 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_socketio import SocketIO, join_room, emit
-import eventlet
-import uuid
-
-eventlet.monkey_patch()
+from datetime import datetime, timedelta
+import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, async_mode='eventlet')
+socketio = SocketIO(app)
+UPLOAD_FOLDER = 'static/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Homepage: create or join a room
+chat_history = {}
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Redirect to room with name
 @app.route('/join', methods=['POST'])
 def join():
     name = request.form['name']
     room = request.form['room']
     return redirect(url_for('chat', room_id=room, name=name))
 
-# Chat room
 @app.route('/chat/<room_id>')
 def chat(room_id):
     name = request.args.get('name')
@@ -29,16 +28,62 @@ def chat(room_id):
         return redirect('/')
     return render_template('chat.html', room_id=room_id, name=name)
 
-# SocketIO: handle messages
 @socketio.on('join')
 def handle_join(data):
-    join_room(data['room'])
-    emit('message', {'user': 'System', 'text': f"{data['name']} joined the room."}, room=data['room'])
+    room = data['room']
+    name = data['name']
+    join_room(room)
+    emit('message', {'user': 'System', 'text': f"{name} joined the room."}, room=room)
+
+    now = datetime.now()
+    if room in chat_history:
+        for msg in chat_history[room]:
+            if now - msg['time'] < timedelta(hours=24):
+                emit('message', {
+                    'user': msg['user'],
+                    'text': msg['text'],
+                    'image_url': msg.get('image_url')
+                })
 
 @socketio.on('send_message')
 def handle_send_message(data):
-    emit('message', {'user': data['name'], 'text': data['message']}, room=data['room'])
+    room = data['room']
+    msg = {
+        'user': data['name'],
+        'text': data.get('message', ''),
+        'time': datetime.now()
+    }
+    if 'image_url' in data:
+        msg['image_url'] = data['image_url']
 
-# Main start point for Render
+    if room not in chat_history:
+        chat_history[room] = []
+    chat_history[room].append(msg)
+
+    emit('message', {
+        'user': msg['user'],
+        'text': msg['text'],
+        'image_url': msg.get('image_url')
+    }, room=room)
+
+@app.route('/upload_image', methods=['POST'])
+def upload_image():
+    file = request.files['image']
+    filename = f"{datetime.now().timestamp()}_{file.filename}"
+    path = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(path)
+    return jsonify({"url": f"/static/uploads/{filename}"})
+
+@app.route('/admin')
+def admin():
+    return render_template('admin.html')
+
+@app.route('/clear_chats', methods=['POST'])
+def clear_chats():
+    global chat_history
+    chat_history = {}
+    socketio.emit('message', {'user': 'System', 'text': '⚠️ Chat history was cleared by Admin.'})
+    return redirect(url_for('admin'))
+
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=10000)
+    socketio.run(app, debug=True)

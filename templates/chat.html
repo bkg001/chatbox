@@ -1,171 +1,187 @@
-<!-- VERSION 6: Full WhatsApp-style Chat Page -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Chat Room - {{ room_id }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Room</title>
   <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
   <style>
     body {
+      font-family: Arial, sans-serif;
       margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #e5ddd5;
+      background: #e5ddd5;
       display: flex;
       flex-direction: column;
       height: 100vh;
     }
 
     header {
-      background-color: #075e54;
+      background: #075e54;
       color: white;
       padding: 15px;
-      font-size: 18px;
-      font-weight: bold;
+      text-align: center;
     }
 
     #chat-box {
       flex: 1;
       overflow-y: auto;
-      padding: 15px;
-      display: flex;
-      flex-direction: column;
+      padding: 10px;
     }
 
     .message {
-      max-width: 70%;
-      padding: 10px 14px;
-      margin-bottom: 10px;
+      margin: 8px;
+      padding: 10px;
       border-radius: 8px;
+      max-width: 70%;
       position: relative;
-      word-wrap: break-word;
-      font-size: 15px;
-      line-height: 1.4;
     }
 
-    .message.user {
-      align-self: flex-end;
+    .user {
       background-color: #dcf8c6;
-      border-bottom-right-radius: 0;
+      align-self: flex-end;
+      margin-left: auto;
     }
 
-    .message.other {
+    .other {
+      background-color: white;
       align-self: flex-start;
-      background-color: #fff;
-      border-bottom-left-radius: 0;
     }
 
-    .message.system {
-      align-self: center;
-      background-color: #d3d3d3;
-      color: #444;
-      border-radius: 20px;
-      padding: 5px 10px;
-      font-size: 13px;
-    }
-
-    .time {
-      font-size: 11px;
-      color: #555;
-      position: absolute;
-      bottom: 4px;
-      right: 8px;
+    .system {
+      text-align: center;
+      background: #ccc;
+      font-style: italic;
     }
 
     .input-area {
       display: flex;
-      background: #f0f0f0;
+      flex-wrap: wrap;
       padding: 10px;
+      background: #f0f0f0;
+      gap: 5px;
     }
 
-    #message {
+    .input-area input[type="text"] {
       flex: 1;
       padding: 10px;
-      border-radius: 20px;
+      border-radius: 5px;
       border: 1px solid #ccc;
-      font-size: 14px;
     }
 
-    button {
-      background-color: #25d366;
+    .input-area input[type="file"] {
+      flex-basis: 100%;
+    }
+
+    .input-area button {
+      background: #25d366;
       color: white;
       border: none;
-      border-radius: 50%;
-      padding: 10px 14px;
-      font-size: 16px;
-      margin-left: 10px;
+      padding: 10px 15px;
+      border-radius: 5px;
       cursor: pointer;
     }
 
-    @media (max-width: 600px) {
-      .message {
-        max-width: 90%;
-      }
+    .message img {
+      max-width: 200px;
+      border-radius: 8px;
+      display: block;
+      margin-top: 5px;
+    }
 
-      header {
-        font-size: 16px;
-        padding: 10px;
-      }
+    .time {
+      display: block;
+      font-size: 10px;
+      text-align: right;
+      color: gray;
     }
   </style>
 </head>
 <body>
+  <header>Chat Room: {{ room_id }}</header>
+  <div id="chat-box"></div>
 
-<header>
-  Chat Room: {{ room_id }} — You: {{ name }}
-</header>
+  <div class="input-area">
+    <input type="file" id="imageFile" accept="image/*">
+    <input id="message" type="text" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage();">
+    <button onclick="sendMessage()">➤</button>
+  </div>
 
-<div id="chat-box"></div>
+  <script>
+    const socket = io();
+    const room = "{{ room_id }}";
+    const name = "{{ name }}";
 
-<div class="input-area">
-  <input id="message" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage();">
-  <button onclick="sendMessage()">➤</button>
-</div>
+    socket.emit('join', { room: room, name: name });
 
-<script>
-  const socket = io();
-  const room = "{{ room_id }}";
-  const name = "{{ name }}";
+    socket.on('message', data => {
+      const msg = document.createElement('div');
+      msg.className = 'message';
 
-  socket.emit('join', { room: room, name: name });
+      if (data.user === 'System') {
+        msg.classList.add('system');
+        msg.textContent = data.text;
+      } else if (data.user === name) {
+        msg.classList.add('user');
+      } else {
+        msg.classList.add('other');
+      }
 
-  socket.on('message', data => {
-    const messageDiv = document.createElement('div');
-    const isSystem = data.user === 'System';
-    const isOwn = data.user === name;
+      if (data.image_url) {
+        msg.innerHTML = `<strong>${data.user}:</strong><br>
+                         <img src="${data.image_url}">
+                         ${data.text ? `<br>${data.text}` : ''}<span class="time">${getTime()}</span>`;
+      } else {
+        msg.innerHTML = `<strong>${data.user}:</strong> ${data.text}<span class="time">${getTime()}</span>`;
+      }
 
-    if (isSystem) {
-      messageDiv.className = 'message system';
-      messageDiv.textContent = data.text;
-    } else {
-      messageDiv.className = 'message ' + (isOwn ? 'user' : 'other');
-      messageDiv.innerHTML = `<strong>${data.user}:</strong> ${data.text}<span class="time">${getTime()}</span>`;
+      document.getElementById('chat-box').appendChild(msg);
+      scrollToBottom();
+    });
+
+    function sendMessage() {
+      const msgInput = document.getElementById('message');
+      const imageInput = document.getElementById('imageFile');
+      const msg = msgInput.value.trim();
+      const imageFile = imageInput.files[0];
+
+      if (!msg && !imageFile) return;
+
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append("image", imageFile);
+
+        fetch("/upload_image", {
+          method: "POST",
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          socket.emit("send_message", {
+            room: room,
+            name: name,
+            message: msg,
+            image_url: data.url
+          });
+        });
+        imageInput.value = "";
+      } else {
+        socket.emit("send_message", {
+          room: room,
+          name: name,
+          message: msg
+        });
+      }
+      msgInput.value = "";
     }
 
-    document.getElementById('chat-box').appendChild(messageDiv);
-    scrollToBottom();
-  });
-
-  function sendMessage() {
-    const msgInput = document.getElementById('message');
-    const msg = msgInput.value.trim();
-    if (msg !== '') {
-      socket.emit('send_message', { room: room, name: name, message: msg });
-      msgInput.value = '';
+    function scrollToBottom() {
+      const chatBox = document.getElementById('chat-box');
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
-  }
 
-  function scrollToBottom() {
-    const chatBox = document.getElementById('chat-box');
-    chatBox.scrollTop = chatBox.scrollHeight;
-  }
-
-  function getTime() {
-    const now = new Date();
-    return now.getHours().toString().padStart(2, '0') + ":" +
-           now.getMinutes().toString().padStart(2, '0');
-  }
-</script>
-
+    function getTime() {
+      const now = new Date();
+      return now.getHours() + ":" + String(now.getMinutes()).padStart(2, '0');
+    }
+  </script>
 </body>
 </html>
