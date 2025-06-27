@@ -167,7 +167,7 @@
 
   <div class="input-container">
     <label for="fileInput" class="attachment-button">📎</label>
-    <input type="file" id="fileInput" style="display: none;" accept="image/*" />
+    <input type="file" id="fileInput" style="display: none;" accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip" />
     <input id="messageInput" type="text" placeholder="Type a message...">
     <button id="sendButton">➤</button>
   </div>
@@ -200,6 +200,10 @@
       } else if (data.type === 'image' || data.type === 'sticker') {
         div.innerHTML = `<b>${data.user}</b>:<br><img src="${data.image_url}">
         <div class="delete-btn" onclick="deleteMessage('${data.timestamp}')">✖</div>`;
+      } else if (data.type === 'document' || data.type === 'file') {
+        const fileName = data.image_url.split('/').pop();
+        div.innerHTML = `<b>${data.user}</b>:<br><a href="${data.image_url}" download target="_blank">📄 ${fileName}</a>
+        <div class="delete-btn" onclick="deleteMessage('${data.timestamp}')">✖</div>`;
       }
 
       chatBox.appendChild(div);
@@ -225,6 +229,7 @@
 
       const formData = new FormData();
       formData.append('image', file);
+
       const res = await fetch('/upload_image', {
         method: 'POST',
         body: formData
@@ -232,7 +237,17 @@
 
       const result = await res.json();
       if (result.url) {
-        socket.emit('send_message', { name, room, type: 'image', image_url: result.url });
+        const ext = file.name.split('.').pop().toLowerCase();
+        const docExt = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'zip'];
+
+        const type = docExt.includes(ext) ? 'document' : 'image';
+
+        socket.emit('send_message', {
+          name,
+          room,
+          type,
+          image_url: result.url
+        });
       }
     });
 

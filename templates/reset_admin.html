@@ -1,0 +1,49 @@
+<!-- templates/reset_admin.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reset Admin Password</title>
+  <style>
+    body {
+      background-color: #e5ddd5;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .reset-container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #ff5722;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="reset-container">
+    <h2>Reset Admin Password</h2>
+    <form action="/reset_admin" method="POST">
+      <input type="text" name="username" placeholder="Username" required />
+      <input type="password" name="new_password" placeholder="New Password" required />
+      <button type="submit">Reset Password</button>
+    </form>
+  </div>
+</body>
+</html>

@@ -16,9 +16,9 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
 DATA_FILE = 'chat_data.json'
-all_users = {}         # { room_id: set of all users who ever joined }
-online_users = {}      # { room_id: set of currently online users }
-user_sessions = {}     # { sid: (username, room_id) }
+all_users = {}
+online_users = {}
+user_sessions = {}
 
 # Load chat history
 def load_messages():
@@ -32,7 +32,6 @@ def save_messages(data):
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
-# Routes
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -65,7 +64,6 @@ def upload_image():
         return jsonify({'url': url})
     return jsonify({'error': 'No file uploaded'}), 400
 
-# User deletes own message
 @app.route('/delete_message', methods=['POST'])
 def delete_message():
     data = request.json
@@ -77,7 +75,6 @@ def delete_message():
     save_messages(messages)
     return '', 204
 
-# Admin deletes specific message
 @app.route('/delete_message_admin', methods=['POST'])
 def delete_message_admin():
     data = request.json
@@ -88,13 +85,11 @@ def delete_message_admin():
     save_messages(messages)
     return '', 204
 
-# Admin clears all messages
 @app.route('/clear_all_chats', methods=['POST'])
 def clear_all_chats():
     save_messages({})
     return '', 204
 
-# Admin selects room to clear
 @app.route('/get_rooms')
 def get_rooms():
     messages = load_messages()
@@ -110,10 +105,8 @@ def clear_room_chat():
         save_messages(messages)
     return '', 204
 
-# Get members of a room
 @app.route('/get_members/<room>')
 def get_members(room):
-    # Debug: Print the user tracking dictionaries
     print("All Users:", all_users)
     print("Online Users:", online_users)
 
@@ -127,7 +120,6 @@ def get_members(room):
         })
     return jsonify({'members': members})
 
-# Socket.IO events
 @socketio.on('join')
 def handle_join(data):
     room = data['room']
@@ -145,7 +137,6 @@ def handle_join(data):
         'timestamp': datetime.utcnow().isoformat()
     }, room=room)
 
-    # Send past messages
     messages = load_messages().get(room, [])
     for msg in messages:
         emit('message', msg)
@@ -173,7 +164,7 @@ def handle_send_message(data):
 
     if msg_type == 'text':
         message['text'] = data['message']
-    elif msg_type in ['image', 'sticker']:
+    elif msg_type in ['image', 'sticker', 'document']:
         message['image_url'] = data['image_url']
     else:
         return
@@ -184,7 +175,7 @@ def handle_send_message(data):
 
     emit('message', message, room=room)
 
-# Run App
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=5050, allow_unsafe_werkzeug=True)
+
