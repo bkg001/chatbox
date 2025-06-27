@@ -11,27 +11,28 @@ app.config['SECRET_KEY'] = 'secret!'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 socketio = SocketIO(app)
 
-# Create uploads folder if not exists
+# Ensure upload folder exists
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
 DATA_FILE = 'chat_data.json'
+all_users = {}         # { room_id: set of all users who ever joined }
+online_users = {}      # { room_id: set of currently online users }
+user_sessions = {}     # { sid: (username, room_id) }
 
-# In-memory tracking of online users per room
-online_users = {}
-
-# Load chat history from file
+# Load chat history
 def load_messages():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, 'r') as f:
             return json.load(f)
     return {}
 
-# Save chat history to file
+# Save chat history
 def save_messages(data):
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
+# Routes
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -64,6 +65,7 @@ def upload_image():
         return jsonify({'url': url})
     return jsonify({'error': 'No file uploaded'}), 400
 
+# User deletes own message
 @app.route('/delete_message', methods=['POST'])
 def delete_message():
     data = request.json
@@ -75,6 +77,7 @@ def delete_message():
     save_messages(messages)
     return '', 204
 
+# Admin deletes specific message
 @app.route('/delete_message_admin', methods=['POST'])
 def delete_message_admin():
     data = request.json
@@ -85,11 +88,13 @@ def delete_message_admin():
     save_messages(messages)
     return '', 204
 
+# Admin clears all messages
 @app.route('/clear_all_chats', methods=['POST'])
 def clear_all_chats():
     save_messages({})
     return '', 204
 
+# Admin selects room to clear
 @app.route('/get_rooms')
 def get_rooms():
     messages = load_messages()
@@ -105,20 +110,29 @@ def clear_room_chat():
         save_messages(messages)
     return '', 204
 
-@app.route('/get_members/<room_id>')
-def get_members(room_id):
-    users = online_users.get(room_id, {})
-    return jsonify({'members': list(users.items())})
+# Get members of a room
+@app.route('/get_members/<room>')
+def get_members(room):
+    online = list(online_users.get(room, set()))
+    all_in_room = list(all_users.get(room, set()))
+    members = []
+    for user in all_in_room:
+        members.append({
+            'name': user,
+            'online': user in online
+        })
+    return jsonify({'members': members})
 
+# Socket.IO events
 @socketio.on('join')
 def handle_join(data):
     room = data['room']
     name = data['name']
     join_room(room)
 
-    if room not in online_users:
-        online_users[room] = {}
-    online_users[room][name] = True
+    all_users.setdefault(room, set()).add(name)
+    online_users.setdefault(room, set()).add(name)
+    user_sessions[request.sid] = (name, room)
 
     emit('message', {
         'user': 'System',
@@ -127,11 +141,18 @@ def handle_join(data):
         'timestamp': datetime.utcnow().isoformat()
     }, room=room)
 
+    # Send past messages
     messages = load_messages().get(room, [])
     for msg in messages:
         emit('message', msg)
 
-    emit('update_members', list(online_users[room].keys()), room=room)
+@socketio.on('disconnect')
+def handle_disconnect():
+    sid = request.sid
+    if sid in user_sessions:
+        name, room = user_sessions[sid]
+        online_users.get(room, set()).discard(name)
+        user_sessions.pop(sid, None)
 
 @socketio.on('send_message')
 def handle_send_message(data):
@@ -159,14 +180,7 @@ def handle_send_message(data):
 
     emit('message', message, room=room)
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    # Not reliable to track user on disconnect unless user info is stored in session
-    pass
-
-import eventlet
-eventlet.monkey_patch()
-
+# Run App
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port)
+    socketio.run(app, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
