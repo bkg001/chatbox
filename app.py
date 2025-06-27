@@ -144,3 +144,19 @@ def handle_send_message(data):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port)
+# Get all room names for admin dropdown
+@app.route('/get_rooms')
+def get_rooms():
+    messages = load_messages()
+    return jsonify({'rooms': list(messages.keys())})
+
+# Clear a specific room's messages
+@app.route('/clear_room_chat', methods=['POST'])
+def clear_room_chat():
+    data = request.json
+    room = data.get('room')
+    messages = load_messages()
+    if room in messages:
+        del messages[room]
+        save_messages(messages)
+    return '', 204

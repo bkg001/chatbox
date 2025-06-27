@@ -1,123 +1,94 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Admin Panel - Clear Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <title>Admin Panel</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #e5ddd5;
-      margin: 0;
+      padding: 30px;
+      background: #f5f5f5;
     }
-
-    header {
-      background-color: #075e54;
-      color: white;
-      padding: 15px;
-      text-align: center;
+    h2 {
+      color: #333;
     }
-
-    #chat-box {
-      padding: 10px;
-      height: 70vh;
-      overflow-y: auto;
-      background: #ece5dd;
-    }
-
-    .msg {
-      background-color: white;
-      margin: 10px;
-      padding: 10px;
-      border-radius: 8px;
-      position: relative;
-      max-width: 60%;
-    }
-
-    .admin-delete {
-      position: absolute;
-      bottom: -5px;
-      right: -5px;
-      background-color: red;
-      color: white;
-      border-radius: 50%;
-      font-size: 12px;
-      padding: 4px;
-      cursor: pointer;
-    }
-
-    #controls {
-      padding: 15px;
-      text-align: center;
-      background-color: #fff;
-    }
-
-    #clear-btn {
-      background-color: #d9534f;
-      color: white;
+    button {
       padding: 10px 20px;
+      margin: 10px 0;
+      background: #dc3545;
+      color: white;
       border: none;
-      border-radius: 8px;
-      font-size: 16px;
+      border-radius: 6px;
       cursor: pointer;
     }
-
-    img {
-      max-width: 100%;
+    select {
+      padding: 8px;
+      margin-right: 10px;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 500px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
-  <header>Admin Chat Control Panel</header>
-  <div id="chat-box"></div>
+  <div class="card">
+    <h2>Admin Control Panel</h2>
 
-  <div id="controls">
-    <button id="clear-btn" onclick="clearChat()">🗑️ Clear All Chat</button>
+    <!-- Option 1: Clear All -->
+    <form onsubmit="clearAllChats(); return false;">
+      <button type="submit">🧹 Clear All Rooms Chat History</button>
+    </form>
+
+    <hr>
+
+    <!-- Option 2: Clear specific room -->
+    <h3>Clear Specific Room:</h3>
+    <select id="roomSelect">
+      <option value="">-- Select Room --</option>
+    </select>
+    <button onclick="clearRoom()">Delete This Room's Messages</button>
   </div>
 
   <script>
-    const socket = io();
-    const room = "admin";
-
-    socket.emit('join', { room: room, name: 'Admin' });
-
-    socket.on('message', data => {
-      const msg = document.createElement('div');
-      msg.classList.add('msg');
-      msg.innerHTML = `<strong>${data.user}:</strong><br>`;
-
-      if (data.type === 'image' || data.type === 'sticker') {
-        const img = document.createElement('img');
-        img.src = data.image_url;
-        msg.appendChild(img);
-      } else {
-        msg.innerHTML += data.text;
-      }
-
-      const del = document.createElement('span');
-      del.className = 'admin-delete';
-      del.innerText = 'X';
-      del.onclick = () => deleteMessage(data.timestamp);
-      msg.appendChild(del);
-
-      document.getElementById('chat-box').appendChild(msg);
-    });
-
-    function deleteMessage(timestamp) {
-      fetch('/delete_message_admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timestamp: timestamp })
+    // Get all room names from backend
+    fetch('/get_rooms')
+      .then(res => res.json())
+      .then(data => {
+        const select = document.getElementById('roomSelect');
+        data.rooms.forEach(room => {
+          const option = document.createElement('option');
+          option.value = room;
+          option.textContent = room;
+          select.appendChild(option);
+        });
       });
+
+    function clearAllChats() {
+      if (confirm("Are you sure you want to delete ALL rooms' chat history?")) {
+        fetch('/clear_all_chats', { method: 'POST' })
+          .then(res => {
+            if (res.ok) alert("✅ All chats deleted successfully!");
+            else alert("Error deleting.");
+          });
+      }
     }
 
-    function clearChat() {
-      fetch('/clear_all_chats', {
-        method: 'POST'
-      }).then(() => {
-        document.getElementById('chat-box').innerHTML = '';
-      });
+    function clearRoom() {
+      const room = document.getElementById('roomSelect').value;
+      if (!room) return alert("Please select a room first.");
+      if (confirm(`Are you sure you want to delete all messages in "${room}"?`)) {
+        fetch('/clear_room_chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ room: room })
+        }).then(res => {
+          if (res.ok) alert(`✅ "${room}" chat cleared.`);
+          else alert("Error clearing room.");
+        });
+      }
     }
   </script>
 </body>
