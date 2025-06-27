@@ -1,14 +1,15 @@
+<!-- VERSION 3: WhatsApp Style with Members -->
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Room</title>
+  <meta charset="UTF-8">
+  <title>Chat Room - {{ room_id }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
-      font-family: 'Roboto', sans-serif;
+      font-family: Arial, sans-serif;
       background-color: #e5ddd5;
     }
 
@@ -16,33 +17,54 @@
       background-color: #075e54;
       color: white;
       padding: 10px;
-      text-align: center;
+      font-size: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #membersModal {
+      display: none;
+      position: fixed;
+      top: 60px;
+      right: 10px;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 10;
+      width: 200px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
     }
 
     #chat-box {
-      height: 75vh;
-      overflow-y: auto;
+      height: calc(100vh - 120px);
+      overflow-y: scroll;
       padding: 10px;
-      background: #ece5dd;
     }
 
-    .msg {
-      margin: 10px;
-      padding: 8px 12px;
-      border-radius: 10px;
-      max-width: 60%;
-      position: relative;
-      word-wrap: break-word;
-    }
-
-    .own {
+    .message {
       background: #dcf8c6;
-      margin-left: auto;
+      padding: 8px 12px;
+      margin: 6px 0;
+      border-radius: 8px;
+      max-width: 70%;
+      clear: both;
     }
 
-    .other {
+    .message.other {
       background: white;
-      margin-right: auto;
+      float: left;
+    }
+
+    .message.self {
+      background: #dcf8c6;
+      float: right;
+    }
+
+    .message img {
+      max-width: 150px;
+      border-radius: 5px;
     }
 
     .input-area {
@@ -51,150 +73,137 @@
       background: #f0f0f0;
     }
 
-    #message {
+    .input-area input[type="text"] {
       flex: 1;
       padding: 10px;
       border-radius: 20px;
       border: 1px solid #ccc;
+      margin-right: 10px;
     }
 
-    button, .icon-btn {
-      margin-left: 5px;
-      padding: 10px;
-      border: none;
-      border-radius: 50%;
-      background: #075e54;
-      color: white;
-      cursor: pointer;
-    }
-
-    .delete-btn {
-      position: absolute;
-      bottom: -5px;
-      right: -5px;
-      background: red;
-      border-radius: 50%;
-      padding: 2px 5px;
-      font-size: 12px;
-      color: white;
-      cursor: pointer;
-    }
-
-    #sticker-panel {
+    .input-area input[type="file"] {
       display: none;
-      padding: 10px;
-      background: #fff;
-      border-top: 1px solid #ccc;
     }
 
-    #sticker-panel img {
-      width: 60px;
-      margin: 5px;
+    .green-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background-color: green;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+
+    button {
+      padding: 8px 14px;
+      background: #25d366;
+      color: white;
+      border: none;
+      border-radius: 20px;
       cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <header>Welcome {{ name }} | Room: {{ room_id }}</header>
+  <header>
+    <div>
+      Room: {{ room_id }}
+    </div>
+    <div>
+      <button onclick="toggleMembers()">Members</button>
+    </div>
+  </header>
+
+  <div id="membersModal"></div>
 
   <div id="chat-box"></div>
 
-  <div id="sticker-panel">
-    <img src="https://i.imgur.com/IaUrttj.png" onclick="sendSticker(this.src)">
-    <img src="https://i.imgur.com/0f8Z2Mv.png" onclick="sendSticker(this.src)">
-    <img src="https://i.imgur.com/W3a6U6s.png" onclick="sendSticker(this.src)">
-  </div>
-
   <div class="input-area">
-    <button class="icon-btn" onclick="toggleStickerPanel()">😊</button>
-    <input id="message" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
-    <input type="file" id="imageInput" style="display:none" onchange="uploadImage(event)">
-    <button class="icon-btn" onclick="document.getElementById('imageInput').click()">📎</button>
-    <button class="icon-btn" onclick="sendMessage()">➡️</button>
+    <input id="message" type="text" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage()">
+    <label>
+      📎
+      <input type="file" id="fileInput" onchange="uploadImage(this)">
+    </label>
+    <button onclick="sendMessage()">Send</button>
   </div>
 
   <script>
     const socket = io();
     const room = "{{ room_id }}";
     const name = "{{ name }}";
+    const chatBox = document.getElementById("chat-box");
 
-    socket.emit('join', { room: room, name: name });
+    socket.emit('join', { room, name });
 
     socket.on('message', data => {
-      const msg = document.createElement('div');
-      msg.classList.add('msg');
-      msg.classList.add(data.user === name ? 'own' : 'other');
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "message " + (data.user === name ? 'self' : 'other');
 
-      if (data.type === 'image') {
-        const img = document.createElement('img');
-        img.src = data.image_url;
-        img.style.maxWidth = '100%';
-        msg.appendChild(img);
-      } else if (data.type === 'sticker') {
-        const img = document.createElement('img');
-        img.src = data.image_url;
-        img.style.width = '80px';
-        msg.appendChild(img);
-      } else {
-        msg.textContent = `${data.user}: ${data.text}`;
+      if (data.type === 'text') {
+        msgDiv.innerHTML = `<strong>${data.user}:</strong> ${data.text}`;
+      } else if (data.type === 'image' || data.type === 'sticker') {
+        msgDiv.innerHTML = `<strong>${data.user}:</strong><br><img src="${data.image_url}" alt="image">`;
       }
 
-      if (data.user === name && data.type !== 'sticker') {
-        const delBtn = document.createElement('span');
-        delBtn.className = 'delete-btn';
-        delBtn.innerText = '🗑️';
-        delBtn.onclick = () => deleteMessage(data.timestamp);
-        msg.appendChild(delBtn);
-      }
+      chatBox.appendChild(msgDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
 
-      document.getElementById('chat-box').appendChild(msg);
-      scrollToBottom();
+    socket.on('update_members', users => {
+      const modal = document.getElementById("membersModal");
+      modal.innerHTML = "<strong>Room Members:</strong><ul style='list-style:none;padding-left:0;'>";
+      for (let user of users) {
+        modal.innerHTML += `<li>${user.online ? '<span class="green-dot"></span>' : ''}${user.name}</li>`;
+      }
+      modal.innerHTML += "</ul>";
     });
 
     function sendMessage() {
-      const msgInput = document.getElementById('message');
-      const msg = msgInput.value.trim();
-      if (msg !== '') {
-        socket.emit('send_message', { room: room, name: name, message: msg, type: 'text' });
+      const msgInput = document.getElementById("message");
+      const text = msgInput.value.trim();
+      if (text) {
+        socket.emit('send_message', {
+          room, name,
+          type: 'text',
+          message: text
+        });
         msgInput.value = '';
       }
     }
 
-    function uploadImage(event) {
-      const file = event.target.files[0];
+    function uploadImage(input) {
+      const file = input.files[0];
+      if (!file) return;
       const formData = new FormData();
       formData.append('image', file);
+
       fetch('/upload_image', {
         method: 'POST',
         body: formData
-      })
-      .then(res => res.json())
-      .then(data => {
-        socket.emit('send_message', { room: room, name: name, image_url: data.url, type: 'image' });
-      });
+      }).then(res => res.json())
+        .then(data => {
+          if (data.url) {
+            socket.emit('send_message', {
+              room, name,
+              type: 'image',
+              image_url: data.url
+            });
+          }
+        });
     }
 
-    function deleteMessage(timestamp) {
-      fetch('/delete_message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room: room, name: name, timestamp: timestamp })
-      });
+    function toggleMembers() {
+      const modal = document.getElementById("membersModal");
+      modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
     }
 
-    function toggleStickerPanel() {
-      const panel = document.getElementById('sticker-panel');
-      panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-    }
-
-    function sendSticker(url) {
-      socket.emit('send_message', { room: room, name: name, image_url: url, type: 'sticker' });
-    }
-
-    function scrollToBottom() {
-      const chatBox = document.getElementById('chat-box');
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
+    // Hide members list when clicked outside
+    document.addEventListener('click', function (e) {
+      const modal = document.getElementById("membersModal");
+      if (!modal.contains(e.target) && e.target.innerText !== "Members") {
+        modal.style.display = "none";
+      }
+    });
   </script>
 </body>
 </html>

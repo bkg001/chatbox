@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
-from flask_socketio import SocketIO, join_room, emit
+from flask_socketio import SocketIO, join_room, leave_room, emit
 from werkzeug.utils import secure_filename
 import os
 import uuid
@@ -17,6 +17,9 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
 
 DATA_FILE = 'chat_data.json'
 
+# In-memory tracking of online users per room
+online_users = {}
+
 # Load chat history from file
 def load_messages():
     if os.path.exists(DATA_FILE):
@@ -29,19 +32,16 @@ def save_messages(data):
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
-# Home Page
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Join Chat Room
 @app.route('/join', methods=['POST'])
 def join():
     name = request.form['name']
     room = request.form['room']
     return redirect(url_for('chat', room_id=room, name=name))
 
-# Chat Page
 @app.route('/chat/<room_id>')
 def chat(room_id):
     name = request.args.get('name')
@@ -49,12 +49,10 @@ def chat(room_id):
         return redirect('/')
     return render_template('chat.html', room_id=room_id, name=name)
 
-# Admin Panel
 @app.route('/admin')
 def admin():
     return render_template('admin.html')
 
-# Upload Image Endpoint
 @app.route('/upload_image', methods=['POST'])
 def upload_image():
     file = request.files['image']
@@ -66,7 +64,6 @@ def upload_image():
         return jsonify({'url': url})
     return jsonify({'error': 'No file uploaded'}), 400
 
-# User deletes their own message
 @app.route('/delete_message', methods=['POST'])
 def delete_message():
     data = request.json
@@ -78,7 +75,6 @@ def delete_message():
     save_messages(messages)
     return '', 204
 
-# Admin deletes a specific message
 @app.route('/delete_message_admin', methods=['POST'])
 def delete_message_admin():
     data = request.json
@@ -89,18 +85,41 @@ def delete_message_admin():
     save_messages(messages)
     return '', 204
 
-# Admin clears all chat history
 @app.route('/clear_all_chats', methods=['POST'])
 def clear_all_chats():
     save_messages({})
     return '', 204
 
-# Socket.IO join room
+@app.route('/get_rooms')
+def get_rooms():
+    messages = load_messages()
+    return jsonify({'rooms': list(messages.keys())})
+
+@app.route('/clear_room_chat', methods=['POST'])
+def clear_room_chat():
+    data = request.json
+    room = data.get('room')
+    messages = load_messages()
+    if room in messages:
+        del messages[room]
+        save_messages(messages)
+    return '', 204
+
+@app.route('/get_members/<room_id>')
+def get_members(room_id):
+    users = online_users.get(room_id, {})
+    return jsonify({'members': list(users.items())})
+
 @socketio.on('join')
 def handle_join(data):
     room = data['room']
     name = data['name']
     join_room(room)
+
+    if room not in online_users:
+        online_users[room] = {}
+    online_users[room][name] = True
+
     emit('message', {
         'user': 'System',
         'text': f'{name} joined the room.',
@@ -108,12 +127,12 @@ def handle_join(data):
         'timestamp': datetime.utcnow().isoformat()
     }, room=room)
 
-    # Send old messages
     messages = load_messages().get(room, [])
     for msg in messages:
         emit('message', msg)
 
-# Socket.IO send message
+    emit('update_members', list(online_users[room].keys()), room=room)
+
 @socketio.on('send_message')
 def handle_send_message(data):
     room = data['room']
@@ -132,7 +151,7 @@ def handle_send_message(data):
     elif msg_type in ['image', 'sticker']:
         message['image_url'] = data['image_url']
     else:
-        return  # Unknown type
+        return
 
     all_msgs = load_messages()
     all_msgs.setdefault(room, []).append(message)
@@ -140,23 +159,11 @@ def handle_send_message(data):
 
     emit('message', message, room=room)
 
-# Run the app
+@socketio.on('disconnect')
+def handle_disconnect():
+    # Not reliable to track user on disconnect unless user info is stored in session
+    pass
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port)
-# Get all room names for admin dropdown
-@app.route('/get_rooms')
-def get_rooms():
-    messages = load_messages()
-    return jsonify({'rooms': list(messages.keys())})
-
-# Clear a specific room's messages
-@app.route('/clear_room_chat', methods=['POST'])
-def clear_room_chat():
-    data = request.json
-    room = data.get('room')
-    messages = load_messages()
-    if room in messages:
-        del messages[room]
-        save_messages(messages)
-    return '', 204
