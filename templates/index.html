@@ -1,80 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Join Chat Room</title>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NEW CHAT APP</title>
   <style>
     body {
-      background-color: #e5ddd5;
+      margin: 0;
+      padding: 0;
       font-family: "Segoe UI", sans-serif;
+      background-color: #e5ddd5;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      margin: 0;
     }
 
-    .join-container {
+    .container {
       background-color: #ffffff;
       padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
       width: 90%;
       max-width: 400px;
       text-align: center;
     }
 
-    h2 {
+    h1 {
       color: #075e54;
       margin-bottom: 20px;
     }
 
     input[type="text"] {
-      width: 90%;
-      padding: 10px;
-      margin: 10px 0;
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
       border: 1px solid #ccc;
       border-radius: 8px;
       font-size: 16px;
     }
 
     button {
+      width: 100%;
+      padding: 12px;
       background-color: #25d366;
-      color: white;
-      padding: 10px 20px;
       border: none;
       border-radius: 8px;
-      cursor: pointer;
+      color: white;
       font-size: 16px;
-      margin-top: 10px;
+      cursor: pointer;
     }
 
     button:hover {
-      background-color: #1ebf5a;
+      background-color: #128c7e;
     }
 
-    @media (max-width: 500px) {
-      .join-container {
+    @media (max-width: 600px) {
+      .container {
         padding: 20px;
       }
 
-      h2 {
-        font-size: 20px;
+      h1 {
+        font-size: 22px;
       }
     }
   </style>
 </head>
 <body>
-
-  <div class="join-container">
-    <h2>Join Chat Room</h2>
-    <form action="/join" method="POST">
-      <input type="text" name="name" placeholder="Enter your name" required><br>
-      <input type="text" name="room" placeholder="Enter room ID" required><br>
+  <div class="container">
+    <h1>Join Chat Room</h1>
+    <form action="/join" method="post">
+      <input type="text" name="name" placeholder="Enter your name" required>
+      <input type="text" name="room" placeholder="Enter room ID" required>
       <button type="submit">Join Chat</button>
     </form>
   </div>
-
 </body>
 </html>

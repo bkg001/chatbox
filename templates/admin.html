@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admin Panel</title>
   <style>
@@ -34,6 +34,10 @@
       border-radius: 8px;
       cursor: pointer;
       font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #128c7e;
     }
 
     select {
@@ -69,28 +73,26 @@
 
   <div class="section">
     <h3>🗂️ Clear Specific Room</h3>
-    <select id="roomDropdown"></select>
+    <select id="roomDropdown">
+      <option value="">-- Select Room --</option>
+    </select>
     <button onclick="clearSelectedRoom()">Clear Room</button>
     <p id="status-room"></p>
   </div>
 
   <script>
-    // Fetch room list with usernames
     async function fetchRooms() {
       const res = await fetch('/get_rooms');
       const data = await res.json();
       const dropdown = document.getElementById('roomDropdown');
-      dropdown.innerHTML = '';
+      dropdown.innerHTML = '<option value="">-- Select Room --</option>';
 
       for (let room of data.rooms) {
-        // Append option to dropdown
         const opt = document.createElement('option');
         opt.value = room;
         opt.textContent = room;
         dropdown.appendChild(opt);
       }
-
-      // Try enhancing by also showing user count or name in future
     }
 
     async function clearAllChats() {
@@ -114,6 +116,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ room })
       });
+
       document.getElementById('status-room').textContent = `✅ Room '${room}' chat cleared!`;
       fetchRooms();
     }
