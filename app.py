@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 from flask_socketio import SocketIO, join_room, leave_room, emit
 from werkzeug.utils import secure_filename
 import os
@@ -8,29 +8,32 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
+app.secret_key = 'super_secret_key'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 socketio = SocketIO(app)
 
-# Ensure upload folder exists
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
 DATA_FILE = 'chat_data.json'
+ADMIN_FILE = 'admin.json'
 all_users = {}
 online_users = {}
 user_sessions = {}
 
-# Load chat history
 def load_messages():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, 'r') as f:
             return json.load(f)
     return {}
 
-# Save chat history
 def save_messages(data):
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
+
+def load_admin_credentials():
+    with open(ADMIN_FILE, 'r') as f:
+        return json.load(f)
 
 @app.route('/')
 def index():
@@ -51,7 +54,48 @@ def chat(room_id):
 
 @app.route('/admin')
 def admin():
+    if not session.get('admin_logged_in'):
+        return redirect('/admin_login')
     return render_template('admin.html')
+
+@app.route('/admin_login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        data = load_admin_credentials()
+        admin_id = request.form['admin_id']
+        password = request.form['password']
+        if admin_id == data['username'] and password == data['password']:
+            session['admin_logged_in'] = True
+            return redirect('/admin')
+        else:
+            return "Invalid credentials", 401
+    return render_template('admin_login.html')
+
+@app.route('/admin_logout')
+def admin_logout():
+    session.pop('admin_logged_in', None)
+    return redirect('/admin_login')
+
+@app.route('/reset_admin', methods=['GET', 'POST'])
+def reset_admin():
+    if request.method == 'POST':
+        new_password = request.form['new_password']
+        confirm = request.form['confirm']
+        if new_password != confirm:
+            return "Passwords do not match", 400
+        data = load_admin_credentials()
+        data['password'] = new_password
+        with open(ADMIN_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+        return redirect('/admin_login')
+    return render_template('reset_admin.html')
+
+@app.route('/room_activity/<room>')
+def room_activity(room):
+    if not session.get('admin_logged_in'):
+        return redirect('/admin_login')
+    messages = load_messages().get(room, [])
+    return render_template('room_activity.html', room=room, messages=messages)
 
 @app.route('/upload_image', methods=['POST'])
 def upload_image():
@@ -107,17 +151,9 @@ def clear_room_chat():
 
 @app.route('/get_members/<room>')
 def get_members(room):
-    print("All Users:", all_users)
-    print("Online Users:", online_users)
-
     online = list(online_users.get(room, set()))
     all_in_room = list(all_users.get(room, set()))
-    members = []
-    for user in all_in_room:
-        members.append({
-            'name': user,
-            'online': user in online
-        })
+    members = [{'name': user, 'online': user in online} for user in all_in_room]
     return jsonify({'members': members})
 
 @socketio.on('join')
@@ -178,4 +214,3 @@ def handle_send_message(data):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=5050, allow_unsafe_werkzeug=True)
-
