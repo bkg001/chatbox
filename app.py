@@ -113,6 +113,10 @@ def clear_room_chat():
 # Get members of a room
 @app.route('/get_members/<room>')
 def get_members(room):
+    # Debug: Print the user tracking dictionaries
+    print("All Users:", all_users)
+    print("Online Users:", online_users)
+
     online = list(online_users.get(room, set()))
     all_in_room = list(all_users.get(room, set()))
     members = []
