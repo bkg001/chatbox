@@ -62,9 +62,9 @@ def admin():
 def admin_login():
     if request.method == 'POST':
         data = load_admin_credentials()
-        username = request.form['username']  # ✅ Correct field
+        admin_id = request.form['admin_id']  # ✅ Correct field
         password = request.form['password']
-        if username == data['username'] and password == data['password']:
+        if admin_id == data['username'] and password == data['password']:
             session['admin_logged_in'] = True
             return redirect('/admin')
         else:
