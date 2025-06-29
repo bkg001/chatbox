@@ -86,17 +86,17 @@
   </div>
 
   <!-- Modal -->
-  <div id="resetModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal()">&times;</span>
-      <h3>Reset Password</h3>
-      <form method="POST" action="/reset_admin">
-        <input type="password" name="new_password" placeholder="New Password" required>
-        <input type="password" name="confirm" placeholder="Confirm Password" required>
-        <button type="submit">Reset</button>
-      </form>
-    </div>
+<div id="resetModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h3>Reset Password</h3>
+    <form method="POST" action="/reset_admin">
+      <input type="password" name="new_password" placeholder="New Password" required>
+      <input type="password" name="confirm" placeholder="Confirm Password" required>
+      <button type="submit">Reset</button>
+    </form>
   </div>
+</div>
 
   <script>
     function openModal() {

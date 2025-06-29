@@ -79,10 +79,11 @@ def admin_logout():
 @app.route('/reset_admin', methods=['GET', 'POST'])
 def reset_admin():
     if request.method == 'POST':
-        new_password = request.form['new_password']
-        confirm = request.form['confirm_password']
+        new_password = request.form.get('new_password')
+        confirm = request.form.get('confirm')
         if new_password != confirm:
             return "Passwords do not match", 400
+
         data = load_admin_credentials()
         data['password'] = new_password
         with open(ADMIN_FILE, 'w') as f:
