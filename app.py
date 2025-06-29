@@ -62,9 +62,9 @@ def admin():
 def admin_login():
     if request.method == 'POST':
         data = load_admin_credentials()
-        admin_id = request.form['admin_id']
+        username = request.form['username']  # ✅ Correct field
         password = request.form['password']
-        if admin_id == data['username'] and password == data['password']:
+        if username == data['username'] and password == data['password']:
             session['admin_logged_in'] = True
             return redirect('/admin')
         else:
@@ -80,7 +80,7 @@ def admin_logout():
 def reset_admin():
     if request.method == 'POST':
         new_password = request.form['new_password']
-        confirm = request.form['confirm']
+        confirm = request.form['confirm_password']
         if new_password != confirm:
             return "Passwords do not match", 400
         data = load_admin_credentials()
