@@ -101,7 +101,12 @@
 
       await fetch('/clear_all_chats', { method: 'POST' });
       document.getElementById('status-all').textContent = "✅ All chats cleared!";
-      fetchRooms();
+      
+      // Reload room dropdown after 1 second
+      setTimeout(() => {
+        fetchRooms();
+        document.getElementById('status-all').textContent = "";
+      }, 1000);
     }
 
     async function clearSelectedRoom() {
@@ -118,9 +123,15 @@
       });
 
       document.getElementById('status-room').textContent = `✅ Room '${room}' chat cleared!`;
-      fetchRooms();
+
+      // Reload room dropdown after 1 second
+      setTimeout(() => {
+        fetchRooms();
+        document.getElementById('status-room').textContent = "";
+      }, 1000);
     }
 
+    // Run on page load
     fetchRooms();
   </script>
 </body>
